@@ -1,6 +1,7 @@
 package com.example.altokeyaa.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -28,20 +30,17 @@ import com.example.altokeyaa.ui.theme.Tertiary
 
 @Composable
 fun HomeScreen(
-    onProfileClick: () -> Unit,
-    onPromosClick: () -> Unit = {},
-    onOrdersClick: () -> Unit = {}
+    contentPadding: PaddingValues = PaddingValues(0.dp),
+    onFirestoreClick: () -> Unit = {}
 ) {
     var address by remember { mutableStateOf("Toca para añadir dirección") }
     var isEditingAddress by remember { mutableStateOf(false) }
 
-    Scaffold(
-        bottomBar = { HomeBottomNavigation(onProfileClick = onProfileClick, onPromosClick = onPromosClick, onOrdersClick = onOrdersClick) }
-    ) { paddingValues ->
+    Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(contentPadding)
                 .background(Color(0xFFF9F9F9))
         ) {
             item {
@@ -51,6 +50,41 @@ fun HomeScreen(
                 )
             }
             item { PromotionBanner() }
+            item { 
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                        .clickable { onFirestoreClick() },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF4DB6AC))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "🔥 Demo Firebase",
+                                color = Color.White,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Black
+                            )
+                            Text(
+                                "Prueba Firestore: Guarda notas en la nube",
+                                color = Color.White,
+                                fontSize = 13.sp,
+                                lineHeight = 16.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                        Text("→", fontSize = 24.sp, color = Color.White)
+                    }
+                }
+            }
             item { MainCategoriesGrid() }
             item { SubCategoriesRow() }
             item { BrandLogosRow() }
@@ -367,38 +401,74 @@ fun BrandLogosRow() {
 
 @Composable
 fun HomeBottomNavigation(
+    selectedScreen: String,
+    onHomeClick: () -> Unit,
     onProfileClick: () -> Unit,
     onPromosClick: () -> Unit,
     onOrdersClick: () -> Unit
 ) {
-    NavigationBar(
-        containerColor = Color.White,
-        tonalElevation = 15.dp,
-        modifier = Modifier.height(75.dp)
+    val colors = MaterialTheme.colorScheme
+    val navItems = listOf(
+        BottomNavItem("HOME", "Inicio", Icons.Default.Home, onHomeClick),
+        BottomNavItem("PROMOS", "Promos", Icons.Default.Percent, onPromosClick),
+        BottomNavItem("ORDERS", "Pedidos", Icons.AutoMirrored.Filled.ReceiptLong, onOrdersClick),
+        BottomNavItem("LOGIN", "Perfil", Icons.Default.PersonOutline, onProfileClick)
+    )
+
+    Surface(
+        color = colors.surface,
+        shadowElevation = 16.dp,
+        tonalElevation = 6.dp,
+        shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .border(
+                width = 1.dp,
+                color = colors.outlineVariant.copy(alpha = 0.45f),
+                shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp)
+            )
     ) {
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Home, contentDescription = null, modifier = Modifier.size(28.dp)) },
-            label = { Text("Inicio", fontWeight = FontWeight.Black) },
-            selected = true,
-            onClick = {}
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Percent, contentDescription = null, modifier = Modifier.size(28.dp)) },
-            label = { Text("Promos", fontWeight = FontWeight.Black) },
-            selected = false,
-            onClick = onPromosClick
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.AutoMirrored.Filled.ReceiptLong, contentDescription = null, modifier = Modifier.size(28.dp)) },
-            label = { Text("Pedidos", fontWeight = FontWeight.Black) },
-            selected = false,
-            onClick = onOrdersClick
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.PersonOutline, contentDescription = null, modifier = Modifier.size(28.dp)) },
-            label = { Text("Perfil", fontWeight = FontWeight.Black) },
-            selected = false,
-            onClick = onProfileClick
-        )
+        NavigationBar(
+            containerColor = Color.Transparent,
+            tonalElevation = 0.dp,
+            modifier = Modifier.height(84.dp)
+        ) {
+            navItems.forEach { item ->
+                val isSelected = selectedScreen == item.key
+                NavigationBarItem(
+                    icon = {
+                        Icon(
+                            item.icon,
+                            contentDescription = item.label,
+                            modifier = Modifier.size(if (isSelected) 30.dp else 26.dp)
+                        )
+                    },
+                    label = {
+                        Text(
+                            item.label,
+                            fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold
+                        )
+                    },
+                    alwaysShowLabel = true,
+                    selected = isSelected,
+                    onClick = item.onClick,
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = colors.primary,
+                        selectedTextColor = colors.primary,
+                        indicatorColor = colors.primary.copy(alpha = 0.14f),
+                        unselectedIconColor = colors.onSurfaceVariant,
+                        unselectedTextColor = colors.onSurfaceVariant
+                    )
+                )
+            }
+        }
     }
 }
+
+private data class BottomNavItem(
+    val key: String,
+    val label: String,
+    val icon: ImageVector,
+    val onClick: () -> Unit
+)

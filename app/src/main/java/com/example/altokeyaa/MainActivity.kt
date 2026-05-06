@@ -2,14 +2,29 @@ package com.example.altokeyaa
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
+import androidx.compose.ui.Modifier
 import androidx.compose.runtime.*
 import com.example.altokeyaa.ui.home.HomeScreen
+import com.example.altokeyaa.ui.home.HomeBottomNavigation
 import com.example.altokeyaa.ui.login.LoginScreen
 import com.example.altokeyaa.ui.orders.OrdersScreen
 import com.example.altokeyaa.ui.promo.PromoScreen
+import com.example.altokeyaa.ui.firestore.FirestoreDemoScreen
 import com.example.altokeyaa.ui.theme.AltokeyaaTheme
+
+private enum class AppScreen {
+    HOME,
+    PROMOS,
+    ORDERS,
+    LOGIN,
+    FIRESTORE
+}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -17,22 +32,52 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             AltokeyaaTheme {
-                var currentScreen by remember { mutableStateOf("home") }
+                var currentScreen by remember { mutableStateOf(AppScreen.HOME) }
 
-                when (currentScreen) {
-                    "home" -> HomeScreen(
-                        onProfileClick = { currentScreen = "login" },
-                        onPromosClick = { currentScreen = "promos" },
-                        onOrdersClick = { currentScreen = "orders" }
-                    )
-                    "promos" -> PromoScreen(onBack = { currentScreen = "home" })
-                    "orders" -> OrdersScreen(onBack = { currentScreen = "home" })
-                    "login" -> LoginScreen(
-                        onLoginSuccess = { 
-                            currentScreen = "home"
-                        },
-                        onBack = { currentScreen = "home" }
-                    )
+                BackHandler(enabled = currentScreen != AppScreen.HOME) {
+                    currentScreen = AppScreen.HOME
+                }
+
+                val openHome = { currentScreen = AppScreen.HOME }
+                val openPromos = { currentScreen = AppScreen.PROMOS }
+                val openOrders = { currentScreen = AppScreen.ORDERS }
+                val openProfile = { currentScreen = AppScreen.LOGIN }
+                val openFirestore = { currentScreen = AppScreen.FIRESTORE }
+
+                Scaffold(
+                    bottomBar = {
+                        if (currentScreen != AppScreen.LOGIN) {
+                            HomeBottomNavigation(
+                                selectedScreen = currentScreen.name,
+                                onHomeClick = openHome,
+                                onPromosClick = openPromos,
+                                onOrdersClick = openOrders,
+                                onProfileClick = openProfile
+                            )
+                        }
+                    }
+                ) { paddingValues ->
+                    when (currentScreen) {
+                        AppScreen.HOME -> HomeScreen(
+                            contentPadding = paddingValues,
+                            onFirestoreClick = openFirestore
+                        )
+
+                        AppScreen.PROMOS -> Box(modifier = Modifier.padding(paddingValues)) {
+                            PromoScreen(onBack = openHome)
+                        }
+
+                        AppScreen.ORDERS -> Box(modifier = Modifier.padding(paddingValues)) {
+                            OrdersScreen(onBack = openHome)
+                        }
+                        AppScreen.LOGIN -> LoginScreen(
+                            onLoginSuccess = openHome,
+                            onBack = openHome
+                        )
+                        AppScreen.FIRESTORE -> Box(modifier = Modifier.padding(paddingValues)) {
+                            FirestoreDemoScreen()
+                        }
+                    }
                 }
             }
         }

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "549691794572",
+    "project_id": "altokeee",
+    "storage_bucket": "altokeee.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:549691794572:android:93ed96d8bfa062a9c387a9",
+        "android_client_info": {
+          "package_name": "com.example.altokeyaa"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC6K_0SFtZ5PUm_keSDaPLOxOWbQ8UB2gM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
