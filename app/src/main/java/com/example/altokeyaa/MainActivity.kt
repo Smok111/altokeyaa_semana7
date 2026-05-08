@@ -23,6 +23,8 @@ private enum class AppScreen {
     PROMOS,
     ORDERS,
     LOGIN,
+    REGISTER,
+    FORGOT_PASSWORD,
     FIRESTORE
 }
 
@@ -42,11 +44,15 @@ class MainActivity : ComponentActivity() {
                 val openPromos = { currentScreen = AppScreen.PROMOS }
                 val openOrders = { currentScreen = AppScreen.ORDERS }
                 val openProfile = { currentScreen = AppScreen.LOGIN }
+                val openRegister = { currentScreen = AppScreen.REGISTER }
+                val openForgotPassword = { currentScreen = AppScreen.FORGOT_PASSWORD }
                 val openFirestore = { currentScreen = AppScreen.FIRESTORE }
 
                 Scaffold(
                     bottomBar = {
-                        if (currentScreen != AppScreen.LOGIN) {
+                        if (currentScreen != AppScreen.LOGIN && 
+                            currentScreen != AppScreen.REGISTER && 
+                            currentScreen != AppScreen.FORGOT_PASSWORD) {
                             HomeBottomNavigation(
                                 selectedScreen = currentScreen.name,
                                 onHomeClick = openHome,
@@ -72,7 +78,16 @@ class MainActivity : ComponentActivity() {
                         }
                         AppScreen.LOGIN -> LoginScreen(
                             onLoginSuccess = openHome,
+                            onRegister = openRegister,
+                            onForgotPassword = openForgotPassword,
                             onBack = openHome
+                        )
+                        AppScreen.REGISTER -> com.example.altokeyaa.ui.login.RegisterScreen(
+                            onRegisterSuccess = openHome,
+                            onBack = openProfile
+                        )
+                        AppScreen.FORGOT_PASSWORD -> com.example.altokeyaa.ui.login.ForgotPasswordScreen(
+                            onBack = openProfile
                         )
                         AppScreen.FIRESTORE -> Box(modifier = Modifier.padding(paddingValues)) {
                             FirestoreDemoScreen()

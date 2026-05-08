@@ -1,4 +1,3 @@
-// ui/login/LoginScreen.kt
 package com.example.altokeyaa.ui.login
 
 import androidx.compose.foundation.background
@@ -9,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -24,19 +24,19 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.altokeyaa.ui.theme.Primary
 
 @Composable
-fun LoginScreen(
+fun RegisterScreen(
     viewModel: LoginViewModel = viewModel(),
-    onLoginSuccess: () -> Unit,
-    onRegister: () -> Unit,
-    onForgotPassword: () -> Unit,
+    onRegisterSuccess: () -> Unit,
     onBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var passwordVisible by remember { mutableStateOf(false) }
 
-    // Detecta login exitoso
-    LaunchedEffect(uiState.isLoginSuccess) {
-        if (uiState.isLoginSuccess) onLoginSuccess()
+    LaunchedEffect(uiState.isRegisterSuccess) {
+        if (uiState.isRegisterSuccess) {
+            onRegisterSuccess()
+            viewModel.resetState()
+        }
     }
 
     Column(
@@ -45,52 +45,32 @@ fun LoginScreen(
             .background(Color(0xFFF5F5F5)),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Header con color (estilo PedidosYa)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(220.dp)
+                .height(180.dp)
                 .background(Primary),
             contentAlignment = Alignment.Center
         ) {
-            // Botón volver
             IconButton(
                 onClick = onBack,
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .padding(top = 40.dp, start = 8.dp)
             ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Volver",
-                    tint = Color.White
-                )
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = Color.White)
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = "🛵", // Reemplaza con tu logo
-                    fontSize = 56.sp
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Altokeyaa",
-                    color = Color.White,
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Ingresa a tu cuenta",
-                    color = Color.White.copy(alpha = 0.85f),
-                    fontSize = 14.sp
-                )
+                Text("📝", fontSize = 48.sp)
+                Text("Crea tu cuenta", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
             }
         }
 
-        // Tarjeta del formulario
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp),
+                .padding(24.dp)
+                .offset(y = (-20).dp),
             shape = RoundedCornerShape(16.dp),
             elevation = CardDefaults.cardElevation(8.dp)
         ) {
@@ -98,74 +78,59 @@ fun LoginScreen(
                 modifier = Modifier.padding(24.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Campo Email
+                OutlinedTextField(
+                    value = uiState.name,
+                    onValueChange = viewModel::onNameChange,
+                    label = { Text("Nombre completo") },
+                    leadingIcon = { Icon(Icons.Default.Person, null) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
                 OutlinedTextField(
                     value = uiState.email,
                     onValueChange = viewModel::onEmailChange,
                     label = { Text("Correo electrónico") },
-                    leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
+                    leadingIcon = { Icon(Icons.Default.Email, null) },
                     isError = uiState.emailError != null,
-                    supportingText = {
-                        uiState.emailError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                    },
+                    supportingText = { uiState.emailError?.let { Text(it) } },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
 
-                // Campo Contraseña
                 OutlinedTextField(
                     value = uiState.password,
                     onValueChange = viewModel::onPasswordChange,
                     label = { Text("Contraseña") },
-                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                    leadingIcon = { Icon(Icons.Default.Lock, null) },
                     trailingIcon = {
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(
-                                if (passwordVisible) Icons.Default.VisibilityOff
-                                else Icons.Default.Visibility,
-                                contentDescription = "Toggle password"
-                            )
+                            Icon(if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility, null)
                         }
                     },
-                    visualTransformation = if (passwordVisible)
-                        VisualTransformation.None else PasswordVisualTransformation(),
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     isError = uiState.passwordError != null,
-                    supportingText = {
-                        uiState.passwordError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                    },
+                    supportingText = { uiState.passwordError?.let { Text(it) } },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
 
-                // Botón Login
+                if (uiState.errorMessage != null) {
+                    Text(uiState.errorMessage!!, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                }
+
                 Button(
-                    onClick = viewModel::onLoginClick,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp),
+                    onClick = viewModel::onRegisterClick,
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                    enabled = !uiState.isLoading
                 ) {
-                    Text("Ingresar", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    if (uiState.isLoading) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                    else Text("Registrarse", fontWeight = FontWeight.Bold)
                 }
-
-                // Link "¿Olvidaste tu contraseña?"
-                TextButton(
-                    onClick = onForgotPassword,
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                ) {
-                    Text("¿Olvidaste tu contraseña?", color = Primary)
-                }
-            }
-        }
-
-        // Link Registro
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("¿No tienes cuenta?", color = Color.Gray)
-            TextButton(onClick = onRegister) {
-                Text("Regístrate", color = Primary, fontWeight = FontWeight.Bold)
             }
         }
     }
