@@ -31,6 +31,12 @@ import com.example.altokeyaa.ui.theme.Tertiary
 @Composable
 fun HomeScreen(
     contentPadding: PaddingValues = PaddingValues(0.dp),
+    userName: String? = null,
+    searchQuery: String = "",
+    searchResults: List<com.example.altokeyaa.ui.orders.Product> = emptyList(),
+    onSearchQueryChange: (String) -> Unit = {},
+    onProductClick: (com.example.altokeyaa.ui.orders.Product) -> Unit = {},
+    onCategoryClick: (String) -> Unit = {},
     onFirestoreClick: () -> Unit = {}
 ) {
     var address by remember { mutableStateOf("Toca para añadir dirección") }
@@ -46,55 +52,101 @@ fun HomeScreen(
             item {
                 HeaderSection(
                     address = address,
+                    userName = userName,
+                    searchQuery = searchQuery,
+                    onSearchQueryChange = onSearchQueryChange,
                     onAddressClick = { isEditingAddress = true }
                 )
             }
-            item { PromotionBanner() }
-            item { 
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .clickable { onFirestoreClick() },
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF4DB6AC))
-                ) {
-                    Row(
+
+            if (searchQuery.isNotEmpty()) {
+                item {
+                    Text(
+                        "Resultados para \"$searchQuery\"",
+                        modifier = Modifier.padding(16.dp),
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Gray
+                    )
+                }
+                items(searchResults) { product ->
+                    Card(
                         modifier = Modifier
-                            .padding(16.dp)
-                            .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                            .clickable { onProductClick(product) },
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(2.dp)
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                "🔥 Demo Firebase",
-                                color = Color.White,
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Black
-                            )
-                            Text(
-                                "Prueba Firestore: Guarda notas en la nube",
-                                color = Color.White,
-                                fontSize = 13.sp,
-                                lineHeight = 16.sp,
-                                fontWeight = FontWeight.Medium
-                            )
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(product.icon, fontSize = 32.sp)
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column {
+                                Text(product.name, fontWeight = FontWeight.Bold)
+                                Text("S/. ${String.format("%.2f", product.price)}", color = Primary)
+                            }
                         }
-                        Text("→", fontSize = 24.sp, color = Color.White)
                     }
                 }
+                if (searchResults.isEmpty()) {
+                    item {
+                        Text(
+                            "No se encontraron productos",
+                            modifier = Modifier.padding(16.dp),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            } else {
+                item { PromotionBanner() }
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .clickable { onFirestoreClick() },
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF4DB6AC))
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "🔥 Demo Firebase",
+                                    color = Color.White,
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Black
+                                )
+                                Text(
+                                    "Prueba Firestore: Guarda notas en la nube",
+                                    color = Color.White,
+                                    fontSize = 13.sp,
+                                    lineHeight = 16.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                            Text("→", fontSize = 24.sp, color = Color.White)
+                        }
+                    }
+                }
+                item { MainCategoriesGrid(onCategoryClick = onCategoryClick) }
+                item { SubCategoriesRow() }
+                item { BrandLogosRow() }
             }
-            item { MainCategoriesGrid() }
-            item { SubCategoriesRow() }
-            item { BrandLogosRow() }
         }
 
         if (isEditingAddress) {
             AddressEditDialog(
                 currentAddress = if (address == "Toca para añadir dirección") "" else address,
                 onDismiss = { isEditingAddress = false },
-                onConfirm = { 
+                onConfirm = {
                     address = if (it.isBlank()) "Toca para añadir dirección" else it
                     isEditingAddress = false
                 }
@@ -142,6 +194,9 @@ fun AddressEditDialog(
 @Composable
 fun HeaderSection(
     address: String,
+    userName: String? = null,
+    searchQuery: String = "",
+    onSearchQueryChange: (String) -> Unit = {},
     onAddressClick: () -> Unit
 ) {
     Column(
@@ -150,6 +205,15 @@ fun HeaderSection(
             .background(Primary)
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
+        if (userName != null) {
+            Text(
+                text = "Hola, $userName 👋",
+                color = Color.White,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 4.dp)
+            )
+        }
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -186,8 +250,8 @@ fun HeaderSection(
         }
         Spacer(modifier = Modifier.height(8.dp))
         TextField(
-            value = "",
-            onValueChange = {},
+            value = searchQuery,
+            onValueChange = onSearchQueryChange,
             placeholder = { Text("Buscar en Altokeyaa", color = Color.Gray, fontSize = 15.sp) },
             modifier = Modifier
                 .fillMaxWidth()
@@ -261,7 +325,7 @@ fun PromotionBanner() {
 }
 
 @Composable
-fun MainCategoriesGrid() {
+fun MainCategoriesGrid(onCategoryClick: (String) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -272,21 +336,25 @@ fun MainCategoriesGrid() {
             title = "Restaurantes",
             subtitle = "Sabor al instante",
             icon = "🍕",
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            onClick = { onCategoryClick("Restaurantes") }
         )
         CategoryCard(
             title = "Supermercado",
             subtitle = "Todo para tu hogar",
             icon = "🛒",
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            onClick = { onCategoryClick("Supermercado") }
         )
     }
 }
 
 @Composable
-fun CategoryCard(title: String, subtitle: String, icon: String, modifier: Modifier) {
+fun CategoryCard(title: String, subtitle: String, icon: String, modifier: Modifier, onClick: () -> Unit = {}) {
     Card(
-        modifier = modifier.height(160.dp),
+        modifier = modifier
+            .height(160.dp)
+            .clickable { onClick() },
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(4.dp)
@@ -323,7 +391,7 @@ fun SubCategoriesRow() {
         )
         items(items) { item ->
             Column(
-                horizontalAlignment = Alignment.CenterHorizontally, 
+                horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.width(75.dp)
             ) {
                 Box(
@@ -381,15 +449,15 @@ fun BrandLogosRow() {
                     elevation = CardDefaults.cardElevation(3.dp)
                 ) {
                     Column(
-                        modifier = Modifier.fillMaxSize(), 
+                        modifier = Modifier.fillMaxSize(),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
                         Text(brand.second, fontSize = 32.sp)
                         Text(
-                            brand.first.take(4), 
-                            fontWeight = FontWeight.ExtraBold, 
-                            fontSize = 10.sp, 
+                            brand.first.take(4),
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 10.sp,
                             color = Primary
                         )
                     }

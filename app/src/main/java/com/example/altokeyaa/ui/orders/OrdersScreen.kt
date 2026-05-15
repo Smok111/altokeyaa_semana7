@@ -12,7 +12,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -20,6 +20,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.altokeyaa.ui.theme.Primary
 import com.example.altokeyaa.ui.theme.Secondary
 import com.example.altokeyaa.ui.theme.Tertiary
@@ -32,11 +34,21 @@ data class Order(
     val amount: String,
     val icon: String,
     val statusColor: Color,
-    val items: List<String>
+    val items: List<String>,
+    val paymentMethod: String = "Efectivo",
+    val isPaid: Boolean = false,
+    val isDelivered: Boolean = false
 )
 
 @Composable
-fun OrdersScreen(onBack: () -> Unit = {}) {
+fun OrdersScreen(
+    viewModel: OrdersViewModel = viewModel(),
+    onBack: () -> Unit = {}
+) {
+    val orders by viewModel.orders.collectAsState()
+    var selectedOrder by remember { mutableStateOf<Order?>(null) }
+    var orderToPay by remember { mutableStateOf<Order?>(null) }
+
     Scaffold(
         topBar = { OrdersTopBar(onBack = onBack) }
     ) { paddingValues ->
@@ -48,65 +60,103 @@ fun OrdersScreen(onBack: () -> Unit = {}) {
         ) {
             item { OrdersHeader() }
 
-            val orders = listOf(
-                Order(
-                    "#PE001",
-                    "Starbucks",
-                    "Entregado",
-                    "Hoy, 10:30 AM",
-                    "S/. 12.50",
-                    "☕",
-                    Color(0xFF4CAF50),
-                    listOf("Latte grande", "Croissant")
-                ),
-                Order(
-                    "#PE002",
-                    "McDonald's",
-                    "En camino",
-                    "Hoy, 11:00 AM",
-                    "S/. 18.99",
-                    "🍔",
-                    Secondary,
-                    listOf("Big Mac", "Papas medianas", "Gaseosa")
-                ),
-                Order(
-                    "#PE003",
-                    "Subway",
-                    "Preparando",
-                    "Hoy, 12:15 PM",
-                    "S/. 14.50",
-                    "🥖",
-                    Tertiary,
-                    listOf("Sándwich pollo", "Bebida")
-                ),
-                Order(
-                    "#PE004",
-                    "Pizza Hut",
-                    "Entregado",
-                    "Ayer, 8:45 PM",
-                    "S/. 22.00",
-                    "🍕",
-                    Color(0xFF4CAF50),
-                    listOf("Pizza Mediana", "Tabla de quesos")
-                ),
-                Order(
-                    "#PE005",
-                    "Farmacia Cruz Azul",
-                    "Entregado",
-                    "Ayer, 3:20 PM",
-                    "S/. 45.75",
-                    "💊",
-                    Color(0xFF4CAF50),
-                    listOf("Medicinas varias")
+            items(orders, key = { it.id }) { order ->
+                OrderCard(
+                    order,
+                    onDetailClick = { selectedOrder = it },
+                    onPayClick = { orderToPay = it },
+                    onDeliverClick = { viewModel.deliverOrder(it.id) }
                 )
-            )
-
-            items(orders) { order ->
-                OrderCard(order)
             }
 
             item { Spacer(modifier = Modifier.height(30.dp)) }
         }
+    }
+
+    if (selectedOrder != null) {
+        OrderDetailDialog(order = selectedOrder!!, onDismiss = { selectedOrder = null })
+    }
+
+    if (orderToPay != null) {
+        PaymentConfirmationDialog(
+            order = orderToPay!!,
+            onConfirm = {
+                viewModel.payOrder(orderToPay!!.id)
+                orderToPay = null
+            },
+            onDismiss = { orderToPay = null }
+        )
+    }
+}
+
+@Composable
+fun PaymentConfirmationDialog(
+    order: Order,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Confirmar Pago", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("¿Desea pagar ${order.amount} por el pedido ${order.id}?")
+                Text(
+                    "Método de pago: ${order.paymentMethod}",
+                    fontWeight = FontWeight.Medium,
+                    color = Primary
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = Primary)
+            ) {
+                Text("Pagar ahora", color = Color.White)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        },
+        shape = RoundedCornerShape(16.dp),
+        containerColor = Color.White
+    )
+}
+
+@Composable
+fun OrderDetailDialog(order: Order, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Detalle del Pedido ${order.id}", fontWeight = FontWeight.Black) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                DetailRow("Comercio", order.merchant)
+                DetailRow("Fecha", order.date)
+                DetailRow("Monto", order.amount)
+                DetailRow("Estado", order.status)
+                DetailRow("Método de Pago", order.paymentMethod)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Productos:", fontWeight = FontWeight.Bold)
+                order.items.forEach { Text("- $it", fontSize = 14.sp) }
+            }
+        },
+        confirmButton = {
+            Button(onClick = onDismiss) { Text("Cerrar") }
+        }
+    )
+}
+
+@Composable
+private fun DetailRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(label, color = Color.Gray, fontSize = 14.sp)
+        Text(value, fontWeight = FontWeight.Medium, fontSize = 14.sp)
     }
 }
 
@@ -198,7 +248,12 @@ fun OrdersHeader() {
 }
 
 @Composable
-fun OrderCard(order: Order) {
+fun OrderCard(
+    order: Order,
+    onDetailClick: (Order) -> Unit,
+    onPayClick: (Order) -> Unit,
+    onDeliverClick: (Order) -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -310,24 +365,64 @@ fun OrderCard(order: Order) {
                 )
             }
 
-            // Action Button
-            Button(
-                onClick = { },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(36.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Primary.copy(alpha = 0.1f)),
-                contentPadding = PaddingValues(0.dp)
+            // Action Buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    "Ver detalles",
-                    color = Primary,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 12.sp
-                )
+                if (!order.isPaid && !order.isDelivered) {
+                    Button(
+                        onClick = { onPayClick(order) },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(36.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Text(
+                            "Pagar",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
+                } else if (order.isPaid && !order.isDelivered) {
+                    Button(
+                        onClick = { onDeliverClick(order) },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(36.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Secondary),
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Text(
+                            "Recibido / Entregado",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+
+                Button(
+                    onClick = { onDetailClick(order) },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(36.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary.copy(alpha = 0.1f)),
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Text(
+                        "Ver detalles",
+                        color = Primary,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 12.sp
+                    )
+                }
             }
         }
     }
 }
-
